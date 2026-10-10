@@ -13,6 +13,7 @@ import { discoverTemplates, discoverSkillFiles } from './discover-skills';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
+import { getHostConfig } from '../hosts/index';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 const ROOT_REALPATH = fs.realpathSync(ROOT);
@@ -66,6 +67,12 @@ console.log('\n  Templates:');
 const TEMPLATES = discoverTemplates(ROOT);
 
 for (const { tmpl, output } of TEMPLATES) {
+  // A host can intentionally omit its own outside-voice skill. Match the
+  // generator's policy rather than reporting that output as missing.
+  if (getHostConfig('claude').generation.skipSkills?.includes(path.dirname(tmpl))) {
+    console.log(`  -  ${tmpl.padEnd(30)} — excluded for Claude by host config`);
+    continue;
+  }
   const tmplPath = path.join(ROOT, tmpl);
   const outPath = path.join(ROOT, output);
   if (!fs.existsSync(tmplPath)) {

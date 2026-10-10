@@ -37,6 +37,7 @@ function run(bin: string, args: string[], opts: RunOpts = {}) {
     GSTACK_HOME: tmpHome,
     HOME: tmpHomeReal,
     ...(opts.env || {}),
+    PATH: `${path.join(tmpHomeReal, 'bin')}:${opts.env?.PATH || SAFE_PATH}`,
   };
   const res = spawnSync(bin, args, {
     env,
@@ -53,6 +54,10 @@ function run(bin: string, args: string[], opts: RunOpts = {}) {
 beforeEach(() => {
   tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'gbrain-detect-gstack-'));
   tmpHomeReal = fs.mkdtempSync(path.join(os.tmpdir(), 'gbrain-detect-home-'));
+  // Keep user gbrain/Claude binaries out of the detection fixtures while
+  // retaining the Bun interpreter required by the TypeScript executable.
+  fs.mkdirSync(path.join(tmpHomeReal, 'bin'));
+  fs.symlinkSync(process.execPath, path.join(tmpHomeReal, 'bin', 'bun'));
 });
 
 afterEach(() => {

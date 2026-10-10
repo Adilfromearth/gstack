@@ -113,9 +113,19 @@ describe('validateReadPath', () => {
 
 describe('validateOutputPath — symlink resolution', () => {
   it('blocks symlink inside /tmp pointing outside safe dirs', () => {
-    const linkPath = join(tmpdir(), 'test-output-symlink-' + Date.now() + '.png');
+    const linkPath = join(realpathSync('/tmp'), 'test-output-symlink-' + Date.now() + '.png');
     try {
-      symlinkSync('/etc/crontab', linkPath);
+      symlinkSync('/etc/hosts', linkPath);
+      expect(() => validateOutputPath(linkPath)).toThrow(/Path must be within/);
+    } finally {
+      try { unlinkSync(linkPath); } catch {}
+    }
+  });
+
+  it('blocks a dangling output symlink even when its parent is safe', () => {
+    const linkPath = join(realpathSync('/tmp'), 'test-output-dangling-' + Date.now() + '.png');
+    try {
+      symlinkSync('/etc/gstack-nonexistent-' + Date.now() + '.png', linkPath);
       expect(() => validateOutputPath(linkPath)).toThrow(/Path must be within/);
     } finally {
       try { unlinkSync(linkPath); } catch {}

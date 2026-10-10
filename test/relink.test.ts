@@ -22,10 +22,11 @@ let skillsDir: string;
 let installDir: string;
 
 function run(cmd: string, env: Record<string, string> = {}, expectFail = false): string {
+  const fixtureState = env.GSTACK_STATE_DIR || tmpDir;
   try {
     return execSync(cmd, {
       cwd: ROOT,
-      env: { ...process.env, GSTACK_STATE_DIR: tmpDir, ...env },
+      env: { ...process.env, GSTACK_STATE_DIR: fixtureState, GSTACK_HOME: fixtureState, GSTACK_STATE_ROOT: fixtureState, ...env },
       encoding: 'utf-8',
       timeout: 10000,
       stdio: ['pipe', 'pipe', 'pipe'],

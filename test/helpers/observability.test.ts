@@ -6,11 +6,11 @@
  * and non-fatal I/O guarantees.
  */
 
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, spyOn } from 'bun:test';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { sanitizeTestName } from './session-runner';
+import { sanitizeTestName, runSkillTest } from './session-runner';
 import { EvalCollector } from './eval-store';
 import { renderDashboard } from '../../scripts/eval-watch';
 import type { HeartbeatData, PartialData } from '../../scripts/eval-watch';
@@ -86,15 +86,35 @@ describe('session-runner observability', () => {
     expect(src).toContain('-failure.json');
   });
 
-  test('11: all new I/O is wrapped in try/catch (non-fatal)', () => {
-    const src = fs.readFileSync(
-      path.resolve(__dirname, 'session-runner.ts'), 'utf-8'
-    );
-    // Count non-fatal comments — should be present for each new I/O path
-    const nonFatalCount = (src.match(/\/\* non-fatal \*\//g) || []).length;
-    // Original had 2 (promptFile unlink + failure transcript), we added 4 more
-    // (runDir creation, progress.log, heartbeat, NDJSON append)
-    expect(nonFatalCount).toBeGreaterThanOrEqual(6);
+  test('11: failed observability writes do not lose the agent result', async () => {
+    const transcript = [
+      { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: 'fixture.txt' } }] } },
+      { type: 'result', subtype: 'success', result: 'fixture result', num_turns: 1, total_cost_usd: 0 },
+    ].map(event => JSON.stringify(event)).join('\n') + '\n';
+    const stdout = new ReadableStream({ start(c) { c.enqueue(new TextEncoder().encode(transcript)); c.close(); } });
+    const stderr = new ReadableStream({ start(c) { c.close(); } });
+    const spawn = spyOn(Bun, 'spawn').mockReturnValue({ stdout, stderr, exited: Promise.resolve(0), pid: 1, kill() {} } as any);
+    const originalMkdir = fs.mkdirSync;
+    const originalWrite = fs.writeFileSync;
+    const mkdir = spyOn(fs, 'mkdirSync').mockImplementation(((p: any, ...args: any[]) => {
+      if (String(p).includes('fixture-observability')) throw new Error('fixture: unwritable run directory');
+      return (originalMkdir as any)(p, ...args);
+    }) as any);
+    const append = spyOn(fs, 'appendFileSync').mockImplementation(() => { throw new Error('fixture: unwritable log'); });
+    const write = spyOn(fs, 'writeFileSync').mockImplementation(((p: any, ...args: any[]) => {
+      if (String(p).includes('e2e-live.json')) throw new Error('fixture: unwritable heartbeat');
+      return (originalWrite as any)(p, ...args);
+    }) as any);
+    try {
+      const result = await runSkillTest({ prompt: 'synthetic fixture', workingDirectory: tmpDir,
+        runId: 'fixture-observability', testName: 'fixture-observability', timeout: 1000 });
+      expect(result.exitReason).toBe('success');
+      expect(result.toolCalls).toHaveLength(1);
+      expect(result.output).toContain('fixture result');
+      expect(append).toHaveBeenCalled();
+    } finally {
+      spawn.mockRestore(); mkdir.mockRestore(); append.mockRestore(); write.mockRestore();
+    }
   });
 });
 

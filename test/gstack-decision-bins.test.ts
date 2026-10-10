@@ -195,8 +195,8 @@ describe("gstack-decision-search --recent / --scope / datamark", () => {
   });
   test("--scope filters by scope", () => {
     log('{"decision":"repo-call","scope":"repo","source":"user"}');
-    log('{"decision":"branch-call","scope":"branch","source":"user"}');
-    const out = search("--scope branch");
+    log('{"decision":"branch-call","scope":"branch","branch":"fixture-branch","source":"user"}');
+    const out = search("--scope branch --branch fixture-branch");
     expect(out).toContain("branch-call");
     expect(out).not.toContain("repo-call");
   });

@@ -17,11 +17,14 @@ let gstackDir: string;
 let stateDir: string;
 
 function run(extraEnv: Record<string, string> = {}, args: string[] = []) {
+  const fixtureState = extraEnv.GSTACK_STATE_DIR || stateDir;
   const result = Bun.spawnSync(['bash', SCRIPT, ...args], {
     env: {
       ...process.env,
       GSTACK_DIR: gstackDir,
       GSTACK_STATE_DIR: stateDir,
+      GSTACK_HOME: fixtureState,
+      GSTACK_STATE_ROOT: fixtureState,
       GSTACK_REMOTE_URL: `file://${join(gstackDir, 'REMOTE_VERSION')}`,
       ...extraEnv,
     },
