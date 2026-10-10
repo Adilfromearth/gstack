@@ -26,9 +26,9 @@ beforeAll(async () => {
   await bm.launch();
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await bm?.close();
   try { testServer.server.stop(); } catch {}
-  setTimeout(() => process.exit(0), 500);
 });
 
 // ─── Unit Tests: Failure Tracking (no browser needed) ────────────

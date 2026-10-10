@@ -15,10 +15,13 @@ const SCRIPT = join(import.meta.dir, '..', '..', 'bin', 'gstack-config');
 let stateDir: string;
 
 function run(args: string[] = [], extraEnv: Record<string, string> = {}) {
+  const fixtureState = extraEnv.GSTACK_STATE_DIR || stateDir;
   const result = Bun.spawnSync(['bash', SCRIPT, ...args], {
     env: {
       ...process.env,
       GSTACK_STATE_DIR: stateDir,
+      GSTACK_HOME: fixtureState,
+      GSTACK_STATE_ROOT: fixtureState,
       ...extraEnv,
     },
     stdout: 'pipe',

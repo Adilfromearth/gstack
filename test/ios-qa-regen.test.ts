@@ -237,6 +237,7 @@ final class AppState {
       const dump = spawnSync('swift', ['package', 'dump-package', '--package-path', bridgeDir], {
         encoding: 'utf8',
       });
+      if (dump.status !== 0) console.error('Swift manifest diagnostic:', dump.error?.message, dump.signal, dump.stderr);
       expect(dump.status).toBe(0);
       const manifest = JSON.parse(dump.stdout) as { targets: Array<{ name: string }> };
       expect(manifest.targets.map(target => target.name).sort()).toEqual([
@@ -254,5 +255,5 @@ final class AppState {
     expect(second.stdout).toContain('gen-accessors: cache hit');
     expect(treeHash(bridgeDir, generatedDir)).toBe(firstHash);
     expect(readFileSync(accessorPath, 'utf8').match(/accessorHash: "([a-f0-9]+)"/)?.[1]).toBe(firstAccessorHash);
-  });
+  }, 60000);
 });

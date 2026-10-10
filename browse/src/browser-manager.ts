@@ -797,6 +797,8 @@ export class BrowserManager {
     const tabId = id ?? this.activeTabId;
     const page = this.pages.get(tabId);
     if (!page) throw new Error(`Tab ${tabId} not found`);
+    // The page's close event updates activeTabId before page.close resolves.
+    const wasActive = tabId === this.activeTabId;
 
     await page.close();
     this.pages.delete(tabId);
@@ -804,7 +806,7 @@ export class BrowserManager {
     this.tabOwnership.delete(tabId);
 
     // Switch to another tab if we closed the active one
-    if (tabId === this.activeTabId) {
+    if (wasActive) {
       const remaining = [...this.pages.keys()];
       if (remaining.length > 0) {
         this.activeTabId = remaining[remaining.length - 1];

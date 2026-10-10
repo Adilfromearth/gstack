@@ -13,7 +13,7 @@ const SRC = fs.readFileSync(path.join(ROOT, 'bin', 'gstack-config'), 'utf-8');
 // satisfied by unrelated text elsewhere in the file.
 function okBranch(): string {
   const start = SRC.indexOf('gbrain-refresh)');
-  const ok = SRC.indexOf('ok)', start);
+  const ok = SRC.indexOf('ok|timeout)', start);
   const end = SRC.indexOf(';;', ok);
   if (start < 0 || ok < 0 || end < 0) throw new Error('Could not locate gbrain-refresh ok) branch');
   return SRC.slice(ok, end);
@@ -24,6 +24,10 @@ describe('gstack-config gbrain-refresh: machine-wide render guards', () => {
 
   test('targets the global install', () => {
     expect(branch).toContain('$HOME/.claude/skills/gstack');
+  });
+
+  test('slow but healthy engines use the same guarded render as healthy ones', () => {
+    expect(branch).toStartWith('ok|timeout)');
   });
 
   test('refuses a symlinked install (would dirty a dev worktree)', () => {

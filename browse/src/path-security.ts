@@ -40,7 +40,14 @@ export function validateOutputPath(filePath: string): void {
   try {
     const stat = fs.lstatSync(resolved);
     if (stat.isSymbolicLink()) {
-      const realTarget = fs.realpathSync(resolved);
+      let realTarget: string;
+      try {
+        realTarget = fs.realpathSync(resolved);
+      } catch {
+        // A dangling symlink is still an existing directory entry. Falling
+        // through to its safe parent would authorize writing outside it.
+        throw new Error(`Path must be within: ${SAFE_DIRECTORIES.join(', ')} (unresolved output symlink)`);
+      }
       const isSafe = SAFE_DIRECTORIES.some(dir => isPathWithin(realTarget, dir));
       if (!isSafe) {
         throw new Error(`Path must be within: ${SAFE_DIRECTORIES.join(', ')}`);
